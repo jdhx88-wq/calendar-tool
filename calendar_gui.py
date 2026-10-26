@@ -138,9 +138,18 @@ class CalendarApp(tk.Tk):
 
     def _run(self, input_path, output_path, start_y, start_m, end_y, end_m, firstweekday):
         try:
-            events = pd.read_csv(input_path, parse_dates=["date"])
+            events = pd.read_csv(input_path)
+            events.columns = [c.strip().lower() for c in events.columns]
+            missing = [c for c in ("date", "activity") if c not in events.columns]
+            if missing:
+                cols = ", ".join(events.columns.tolist())
+                raise ValueError(
+                    f"CSV must have 'date' and 'activity' columns.\n"
+                    f"Found: {cols}"
+                )
+            events["date"] = pd.to_datetime(events["date"])
         except Exception as exc:
-            self.after(0, lambda: self._done(f"Could not read file: {exc}", error=True))
+            self.after(0, lambda e=exc: self._done(f"Could not read file: {e}", error=True))
             return
 
         try:
@@ -157,7 +166,7 @@ class CalendarApp(tk.Tk):
                     if m > 12:
                         m, y = 1, y + 1
         except Exception as exc:
-            self.after(0, lambda: self._done(f"Error: {exc}", error=True))
+            self.after(0, lambda e=exc: self._done(f"Error: {e}", error=True))
             return
 
         self.after(0, lambda: self._done(f"Saved → {output_path}"))
